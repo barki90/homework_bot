@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from exceptions import NotValueInTokenIdError, NotKeyHomeworks, \
     OtherDataType, StatusCodeIsNot200, EndpointNotWorking, \
-    NoKeysInAPI, UndocumentedStatus
+    UndocumentedStatus
 
 load_dotenv()
 
@@ -70,6 +70,7 @@ def check_response(response):
 
     if hw is None:
         raise NotKeyHomeworks()
+
     return hw[0]
 
 
@@ -78,8 +79,8 @@ def parse_status(homework):
     Функция возвращает подготовленную для отправки в Telegram строку.
     содержащую один из вердиктов словаря HOMEWORK_STATUSES
     """
-    if "homework_name" not in homework or "status" not in homework:
-        raise NoKeysInAPI()
+    if "homework_name" not in homework:
+        raise KeyError("homework_name отсутствует в homework")
 
     homework_name = homework["homework_name"]
     homework_status = homework["status"]

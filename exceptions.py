@@ -37,11 +37,6 @@ class EndpointNotWorking(Exception):
         return message
 
 
-class NoKeysInAPI(Exception):
-    def __str__(self):
-        return 'отсутствие ожидаемых ключей в ответе API'
-
-
 class UndocumentedStatus(Exception):
     def __init__(self, status):
         self.status = status
