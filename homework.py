@@ -34,7 +34,7 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """отправляем сообщение"""
+    """отправляем сообщение."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.info(f"Сообщение успешно отправлено '{message}'")
@@ -43,7 +43,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(current_timestamp):
-    """Делает запрос к эндпоинту API-сервиса. Возвращает ответ API"""
+    """Делает запрос к эндпоинту API-сервиса. Возвращает ответ API."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
 
@@ -62,7 +62,7 @@ def get_api_answer(current_timestamp):
 
 
 def check_response(response):
-    """проверяет ответ API и возвращает результат"""
+    """проверяет ответ API и возвращает результат."""
     hw = response['homeworks']
 
     if not isinstance(hw, list):
@@ -75,7 +75,7 @@ def check_response(response):
 
 def parse_status(homework):
     """
-    функция возвращает подготовленную для отправки в Telegram строку,
+    Функция возвращает подготовленную для отправки в Telegram строку.
     содержащую один из вердиктов словаря HOMEWORK_STATUSES
     """
     if "homework_name" not in homework or "status" not in homework:
@@ -93,7 +93,7 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверяем токены и айди чата"""
+    """Проверяем токены и айди чата."""
     lst_token_id = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     lst_token_name = ['PRACTICUM_TOKEN', 'TELEGRAM_TOKEN',
                       'TELEGRAM_CHAT_ID']
