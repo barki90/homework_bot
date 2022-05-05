@@ -5,9 +5,10 @@ import logging
 import telegram
 
 from dotenv import load_dotenv
-from telegram.ext import Updater
 
-from exceptions import *
+from exceptions import NotValueInTokenIdError, NotKeyHomeworks, \
+    OtherDataType, StatusCodeIsNot200, EndpointNotWorking, \
+    NoKeysInAPI, UndocumentedStatus
 
 load_dotenv()
 
@@ -135,7 +136,6 @@ def main():
                 time.sleep(RETRY_TIME)
     else:
         raise NotValueInTokenIdError()
-
 
 
 if __name__ == '__main__':
