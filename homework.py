@@ -3,20 +3,16 @@ import requests
 import time
 import logging
 import telegram
+import sys
 
 from dotenv import load_dotenv
+from http import HTTPStatus
 
-from exceptions import NotValueInTokenIdError, NotKeyHomeworks, \
-    OtherDataType, StatusCodeIsNot200, EndpointNotWorking, \
-    UndocumentedStatus
+from exceptions import (NotValueInTokenIdError, EmptyAPIResponseError,
+                        OtherDataType, StatusCodeIsNot200, EndpointNotWorking,
+                        UndocumentedStatus)
 
 load_dotenv()
-
-logging.basicConfig(
-    filename='main.log',
-    filemode='a',
-    format='%(asctime)s - %(levelname)s - %(message)s - %(lineno)d',
-    level=logging.INFO)
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -36,25 +32,25 @@ HOMEWORK_STATUSES = {
 def send_message(bot, message):
     """отправляем сообщение."""
     try:
+        logging.info("Началась отправка сообщения")
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.info(f"Сообщение успешно отправлено '{message}'")
     except Exception as error:
         logging.error(f"Сообщение не было отправлено, ошибка: {error}")
+    else:
+        logging.info(f"Сообщение успешно отправлено '{message}'")
 
 
 def get_api_answer(current_timestamp):
     """Делает запрос к эндпоинту API-сервиса. Возвращает ответ API."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-
     try:
         api_answer = requests.get(
             ENDPOINT, headers=HEADERS, params=params
         )
     except Exception as error:
         raise EndpointNotWorking(error)
-
-    if api_answer.status_code != 200:
+    if api_answer.status_code != HTTPStatus.OK:
         raise StatusCodeIsNot200(
             api_answer.url, api_answer.status_code
         )
@@ -63,15 +59,12 @@ def get_api_answer(current_timestamp):
 
 def check_response(response):
     """проверяет ответ API и возвращает результат."""
-    hw = response['homeworks']
-
-    if not isinstance(hw, list):
-        raise OtherDataType(type(hw))
-
-    if hw is None:
-        raise NotKeyHomeworks()
-
-    return hw[0]
+    logging.info("Началась проверка ответа сервера")
+    if not isinstance(response, dict):
+        raise TypeError
+    if "homeworks" not in response or "current_date" not in response:
+        raise EmptyAPIResponseError()
+    return response["homeworks"][0]
 
 
 def parse_status(homework):
@@ -81,32 +74,18 @@ def parse_status(homework):
     """
     if "homework_name" not in homework:
         raise KeyError("homework_name отсутствует в homework")
-
     homework_name = homework["homework_name"]
     homework_status = homework["status"]
-
     if homework_status not in HOMEWORK_STATUSES.keys():
         raise UndocumentedStatus(homework_status)
-
     verdict = HOMEWORK_STATUSES.get(homework_status)
-
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
     """Проверяем токены и айди чата."""
     lst_token_id = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    lst_token_name = ['PRACTICUM_TOKEN', 'TELEGRAM_TOKEN',
-                      'TELEGRAM_CHAT_ID']
-
-    for name in lst_token_id:
-        if name is None:
-            logging.critical(
-                f"Отсутствует обязательная переменная окружения: "
-                f"{lst_token_name[lst_token_id.index(name)]}"
-            )
-            return False
-    return True
+    return all(lst_token_id)
 
 
 def main():
@@ -114,30 +93,35 @@ def main():
     check_message_error = ''
     check_message_text = ''
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-
-    if check_tokens():
-        while True:
-            try:
-                response = get_api_answer(1111111)
-                homework = check_response(response)
-                text_message = parse_status(homework)
-                if check_message_text != text_message:
-                    send_message(bot, text_message)
-                    check_message_text = text_message
-                else:
-                    logging.debug('Отсутствие в ответе новых статусов')
-                time.sleep(RETRY_TIME)
-
-            except Exception as error:
-                message = f'Сбой в работе программы: {error}'
-                logging.error(message)
-                if check_message_error != message:
-                    send_message(bot, message)
-                    check_message_error = message
-                time.sleep(RETRY_TIME)
-    else:
-        raise NotValueInTokenIdError()
+    current_timestamp = int(time.time()) - 86400 * 10
+    if not check_tokens():
+        message = 'Отсутствует обязательная переменная окружения'
+        logging.critical(message)
+        sys.exit(message)
+    while True:
+        try:
+            response = get_api_answer(current_timestamp)
+            homework = check_response(response)
+            text_message = parse_status(homework)
+            if check_message_text != text_message:
+                send_message(bot, text_message)
+                check_message_text = text_message
+            else:
+                logging.debug('Отсутствие в ответе новых статусов')
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
+            logging.error(message)
+            if check_message_error != message:
+                send_message(bot, message)
+                check_message_error = message
+        finally:
+            time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        filename='main.log',
+        filemode='a',
+        format='%(asctime)s - %(levelname)s - %(message)s - %(lineno)d',
+        level=logging.INFO)
     main()
