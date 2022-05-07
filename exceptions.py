@@ -1,19 +1,6 @@
-class NotValueInTokenIdError(Exception):
-    def __str__(self):
-        return f'Отсутствует обязательная переменная окружения:'
-
-
 class EmptyAPIResponseError(Exception):
     def __str__(self):
         return f"ответ от API не содержит ключей'"
-
-
-class OtherDataType(Exception):
-    def __init__(self, type):
-        self.type = type
-
-    def __str__(self):
-        return f"ответ от API возвращает не список, а {self.type}"
 
 
 class StatusCodeIsNot200(Exception):

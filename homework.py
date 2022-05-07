@@ -8,9 +8,8 @@ import sys
 from dotenv import load_dotenv
 from http import HTTPStatus
 
-from exceptions import (NotValueInTokenIdError, EmptyAPIResponseError,
-                        OtherDataType, StatusCodeIsNot200, EndpointNotWorking,
-                        UndocumentedStatus)
+from exceptions import (EmptyAPIResponseError, StatusCodeIsNot200,
+                        EndpointNotWorking, UndocumentedStatus)
 
 load_dotenv()
 
