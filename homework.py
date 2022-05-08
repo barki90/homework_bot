@@ -1,10 +1,11 @@
 import os
-import requests
 import time
 import logging
-import telegram
 import sys
 
+import requests
+import telegram
+from telegram import Bot
 from dotenv import load_dotenv
 from http import HTTPStatus
 
@@ -28,7 +29,7 @@ HOMEWORK_STATUSES = {
 }
 
 
-def send_message(bot, message):
+def send_message(bot: telegram.bot.Bot, message: str) -> None:
     """отправляем сообщение."""
     try:
         logging.info("Началась отправка сообщения")
@@ -39,64 +40,75 @@ def send_message(bot, message):
         logging.info(f"Сообщение успешно отправлено '{message}'")
 
 
-def get_api_answer(current_timestamp):
+def get_api_answer(current_timestamp: int) -> dict:
     """Делает запрос к эндпоинту API-сервиса. Возвращает ответ API."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
+
     try:
         api_answer = requests.get(
             ENDPOINT, headers=HEADERS, params=params
         )
     except Exception as error:
         raise EndpointNotWorking(error)
+
     if api_answer.status_code != HTTPStatus.OK:
         raise StatusCodeIsNot200(
             api_answer.url, api_answer.status_code
         )
+
     return api_answer.json()
 
 
-def check_response(response):
+def check_response(response: dict) -> dict:
     """проверяет ответ API и возвращает результат."""
     logging.info("Началась проверка ответа сервера")
+
     if not isinstance(response, dict):
         raise TypeError
+
     if "homeworks" not in response or "current_date" not in response:
         raise EmptyAPIResponseError()
+
     return response["homeworks"][0]
 
 
-def parse_status(homework):
+def parse_status(homework: dict) -> str:
     """
     Функция возвращает подготовленную для отправки в Telegram строку.
     содержащую один из вердиктов словаря HOMEWORK_STATUSES
     """
     if "homework_name" not in homework:
         raise KeyError("homework_name отсутствует в homework")
+
     homework_name = homework["homework_name"]
     homework_status = homework["status"]
-    if homework_status not in HOMEWORK_STATUSES.keys():
-        raise UndocumentedStatus(homework_status)
+
     verdict = HOMEWORK_STATUSES.get(homework_status)
+    if not verdict:
+        raise UndocumentedStatus(homework_status)
+
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
-def check_tokens():
+def check_tokens() -> bool:
     """Проверяем токены и айди чата."""
     lst_token_id = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     return all(lst_token_id)
 
 
-def main():
+def main() -> None:
     """Основная логика работы бота."""
     check_message_error = ''
     check_message_text = ''
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time()) - 86400 * 10
+
     if not check_tokens():
         message = 'Отсутствует обязательная переменная окружения'
         logging.critical(message)
         sys.exit(message)
+
     while True:
         try:
             response = get_api_answer(current_timestamp)
@@ -123,4 +135,5 @@ if __name__ == '__main__':
         filemode='a',
         format='%(asctime)s - %(levelname)s - %(message)s - %(lineno)d',
         level=logging.INFO)
+
     main()
